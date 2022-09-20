@@ -555,8 +555,63 @@ ALVINN（Autonomous Land Vehicle In a Neural Network）： 3 层反向传播网�
 
 ALVTNN 性能的主要测试是在实车上进行测试。
 
-![image-20220917103042474](/Users/charles/PycharmProjects/deep-q-learning-paper-to-code/excavator/强化学习液压挖掘机/image-20220917103042474.png)
+![image-20220917103042474](./image-20220917103042474.png)
 
-![image-20220917103558924](/Users/charles/PycharmProjects/deep-q-learning-paper-to-code/excavator/强化学习液压挖掘机/image-20220917103558924.png)
+![image-20220917103558924](./image-20220917103558924.png)
 
-![image-20220917103611652](/Users/charles/PycharmProjects/deep-q-learning-paper-to-code/excavator/强化学习液压挖掘机/image-20220917103611652.png)
+![image-20220917103611652](./image-20220917103611652.png)
+
+# 模型
+
+我们介绍了瓷砖开挖模型 (TEM) 和单元开挖模型 (CEM) 的设计。 两个模型共享一个相似的结构，由四个子模型组成，即规划核心 fcore、子任务或原语解码器 fx、规范解码器 fspec 和终止解码器 fterm。 给定一般输入表示 u，模型的一般工作流程可以描述为 (5)
+$$
+\begin{aligned}
+x &=f_{\text {core }}(u) \\
+y_1=f_x(x), \quad y_2 &=f_{\text {spec }}(x), \quad y_3=f_{\text {term }}(x)
+\end{aligned}
+$$
+
+
+
+
+其中 y1 ∈ {s(t), p(i)} 是子任务或原语，y2 ∈ {a(t), b(i)} 是规范，y3 ∈ {te (t), ̃te (i )} 表示终止指示符。 下面提供了每个规划模型的详细信息。
+
+A. 瓷砖开挖模型
+在这个瓦片挖掘规划级别，给定瓦片地图作为输入任务，我们需要确定瓦片的全局序列以覆盖大地形。 TEM根据最新的瓷砖地图和加工瓷砖的历史预测挖掘机需要操作的下一块瓷砖。特别是，TEM 采用瓦片图 Gtile(t) 的输入和子任务 (s(t)、s(t-1)、...、s(t-k)) 的过去结果。因此 TEM 的输入为
+$$
+u(t)=\left(G_{t i l e}(t),(s(t), s(t-1), \ldots, s(t-k))\right)
+$$
+TEM 输出子任务移动到瓷砖或挖掘瓷砖。 从四个可能的方向{LEFT、RIGHT、DOWN、UP}中选择子任务移动到磁贴的规范，以指示下一个要移动的磁贴。 给定移动方向，我们可以计算一个全局坐标位置来指定挖掘机底座移动到的位置。 万一，TEM 输出子任务挖掘瓦片。 此图块内的局部地形高度图规范。
+
+![](./study/cnn.png)
+
+模型架构。 TEM 和 CEM 共享相同的网络结构，但使用不同的权重。 规划核心网络由 2 层卷积神经网络 (CNN) 组成，内核大小为 3，步幅大小为 1，填充大小为 1。每个 CNN 层后面都有一个 ReLU 激活函数和内核大小为 2 的 MaxPooling， 步幅大小为 1。解码器都是多层感知器，具有 2 层大小为 128 的全连接 (FC) 神经网络。
+
+如图 2 所示，瓦片图被馈送到卷积层进行特征提取。为了模仿训练数据中的瓦片处理顺序，我们需要使用已处理瓦片的记录。我们将过去的瓦片移动方向序列堆叠为带有从瓦片图中提取的特征的向量。连接的向量被馈送到多个全连接层，这些全连接层生成适当的子任务。与使用基于循环的实现的 NPI 模型不同，我们选择堆叠历史信息作为全连接层的输入，主要是为了高效训练和快速收敛。
+
+To mimic the tile processing order from the training data, we need to use the record of processed tiles. We stack the past sequence of tile movement direction as a vector with the features extracted from the tiles map. The concatenated vector is fed to multiple fully- connected connected layers that generate the appropriate sub- tasks. 
+
+B. 单元挖掘模型
+
+![](./study/cem.png)
+
+单元挖掘模型由带有其规范的瓦片挖掘子任务触发，如图所示。规范是局部地形高度图，是整个任务地形高度图的一部分，由瓦片挖掘模型切碎。 给定局部地形图，单元挖掘模型生成接近和挖掘的任务原语序列。
+
+给定具有规范 a 的子任务挖掘瓦片，模型的输入包括根据规范 a 的局部地形观测 õ(i) 和最后一个任务原语方法规范 b(i - 1)，表示为二维单热向量。 因此单元挖掘模型的输入可以表示为
+$$
+u(i)=\left(G_{t i l e}(i), b(i-1)\right) \in \mathbb{R}^{\mathrm{h} \times \mathrm{w} \times 2}
+$$
+其中 h 和 w 是局部地形观测的高度和宽度。 在 (5) 之后，核心模型首先采用这样的输入 u(i) 并生成局部规划状态 ̃(i)。 接下来，图元解码器采用局部规划状态来产生图元选择 p(i)，要么接近末端执行器到某个点，要么在当前位置挖掘一定深度； 规范解码器采用 s̃(i) 为每个基元生成规范 b(i)，即接近基元的局部坐标或挖掘基元的深度。 输出表示为 one-hot 向量； 终止解码器也需要 s ̃(i) 来预测 t ̃ (i)，无论子任务是否已完成。
+
+## 模型评价
+
+### 数据收集
+
+在本实验中，TEM 和 CEM 模型的**训练数据序列大多是通过基于规则的模拟自动合成的**。 模拟规则被设置为尽可能模仿在现实世界中观察到的人类行为。
+
+训练数据由 3,000 个不同维度的 tilemaps 组成，维度高达 32x32，总共 1,126,900 个样本。 每个网格图都是随机生成的，由挖掘和非挖掘瓦片组成。 我们在这个数据集上训练 TEM 并在随机生成的瓦片地图上进行测试，这些瓦片地图在我们的训练数据集中不存在。 在我们的实现中，我们将向量的大小设置为 8，用于存储历史运动信息，以实现高效训练和快速收敛。 如图 3 所示，我们学习的 TEM 模型可以跳过非挖掘瓦片并以之字形顺序覆盖其余瓦片，用于随机生成的测试用例。
+
+细胞挖掘模型也以类似的方式使用跟踪生成器进行训练，以生成合成数据。
+单元开挖规划问题的开挖模拟遵循先挖当前最高网格的规则。 CEM 模型的训练数据由 10,000 个序列组成，最大维度为 6 × 6。该模型以 1,000 的批量大小和 1e - 3 的学习率进行训练。
+
+​	
