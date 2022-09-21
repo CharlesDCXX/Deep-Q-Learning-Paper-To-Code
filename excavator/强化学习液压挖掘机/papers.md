@@ -615,3 +615,6 @@ $$
 单元开挖规划问题的开挖模拟遵循先挖当前最高网格的规则。 CEM 模型的训练数据由 10,000 个序列组成，最大维度为 6 × 6。该模型以 1,000 的批量大小和 1e - 3 的学习率进行训练。
 
 ​	
+
+# Autonomous trenching with hierarchically organized primitives
+
