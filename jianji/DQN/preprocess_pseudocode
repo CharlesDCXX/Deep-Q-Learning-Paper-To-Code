@@ -1,0 +1,38 @@
+Class RepeatActionAndMaxFrame
+  derives from: gym.Wrapper
+  input: environment, repeat
+  init frame buffer as an array of zeros in shape 2 x the obs space
+
+  function step:
+    input: action
+  	set total reward to 0
+    set done to false
+  	for i in range repeat
+  		call the env.step function
+        receive obs, reward, done, info
+  		increment total reward
+  		insert obs in frame buffer
+  		if done
+            break
+    end for
+  	find the max frame
+  	return: max frame, total reward, done, info
+
+  function reset:
+    input: none
+
+  	call env.reset
+  	reset the frame buffer
+    store initial observation in buffer
+
+    return: initial observation
+
+
+function make_env:
+  input: environment name, new shape, stack size
+  init env with the base gym.make function
+  env := RepeatActionAndMaxFrame
+  env := PreprocessFrame
+  env := StackFrames
+
+  return: env
