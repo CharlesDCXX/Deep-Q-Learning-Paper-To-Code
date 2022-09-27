@@ -11,7 +11,7 @@ class DQNAgent(object):
         self.epsilon = epsilon
         self.lr = lr
         self.n_actions = n_actions
-        self.input_dims = (1,*input_dims)
+        self.input_dims = input_dims
         self.batch_size = batch_size
         self.eps_min = eps_min
         self.eps_dec = eps_dec
@@ -51,11 +51,11 @@ class DQNAgent(object):
         state, action, reward, new_state, done = \
                                 self.memory.sample_buffer(self.batch_size)
 
-        states = T.tensor(state).unsqueeze(1).to(self.q_eval.device)
+        states = T.tensor(state).to(self.q_eval.device)
         rewards = T.tensor(reward).to(self.q_eval.device)
         dones = T.tensor(done).to(self.q_eval.device)
         actions = T.tensor(action).to(self.q_eval.device)
-        states_ = T.tensor(new_state).unsqueeze(1).to(self.q_eval.device)
+        states_ = T.tensor(new_state).to(self.q_eval.device)
 
         return states, actions, rewards, states_, dones
 

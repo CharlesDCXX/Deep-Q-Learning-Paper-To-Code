@@ -57,23 +57,25 @@ class ArmEnv(object):
         self.update_observation(self.base_angle, self.arm_angle)
         coordinate = self.get_coordinate(self.base_angle, self.arm_angle)
         distance = ((coordinate[0] - self.goal[0]) ** 2 + (coordinate[1] - self.goal[1]) ** 2) ** 0.5
-        reward = 20 - distance
-        done = True if distance < 5 else False
+        reward = - distance
+        done = True if distance < 4 else False
         info = ""
-        return self.space_now, reward, done, info
+        return self.get_observation(), reward, done, info
 
     def reset(self):
         self.arm_angle = 80
         # 履带吊底盘旋转角度
         self.base_angle = 0
-        return self.space_now
+        return self.get_observation()
 
     def update_observation(self, base_angle, arm_angle):
         coordinate = self.get_coordinate(base_angle, arm_angle)
         self.space_now = self.space_now * 0
-        self.space_now[coordinate[0], coordinate[1]] = 1
+        self.space_now[int(coordinate[0]), int(coordinate[1])] = 1
 
-
+    def get_observation(self):
+        s_ = np.expand_dims(self.space_now, axis=0)
+        return s_
 # 得到目标旋转角度
 def get_up_angel(env):
     goal_x = env.goal[0]

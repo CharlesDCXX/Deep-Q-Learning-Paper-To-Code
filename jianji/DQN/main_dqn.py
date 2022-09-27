@@ -8,7 +8,7 @@ if __name__ == '__main__':
     n_games = 250
 
     agent = DQNAgent(gamma=0.99, epsilon=1, lr=0.0001,
-                     input_dims=(env.space_now.shape),
+                     input_dims=(env.get_observation().shape),
                      n_actions=len(env.action_space), mem_size=50000, eps_min=0.1,
                      batch_size=32, replace=1000, eps_dec=1e-5,
                      chkpt_dir='models/', algo='DQNAgent',
