@@ -26,6 +26,8 @@ class ArmEnv(object):
         self.base = [5, 0, 0]
         # 履带吊长度
         self.arm_length = 10
+        # 履带吊吊绳长度
+        self.line_length = 0
         # 履带吊上扬初始角度
         self.arm_angle = 80
         # 履带吊底盘旋转角度
