@@ -68,29 +68,29 @@ def create_test():
     action_list_space = []
     # 历史动作
     history_action_list = []
-    chopped_map = tile_grid[0].copy()
+    chopped_map = tile_grid.copy()
     # 建立一个numpy shape(n,32,32)
-    chopped_map1 = np.ones((20000, 32, 32), dtype=int)
+    chopped_map1 = np.ones((10000, 32, 32), dtype=int)
     # TEM测试集
     index_chop = 0
-    length_x = len(chopped_map)
-    length_y = len(chopped_map[0])
+    length_x = len(chopped_map[0])
+    length_y = len(chopped_map[1])
     for i in range(0, train_size):
         index_x = 0
         index_y = 0
         action_list = []
         direct_bool = True
-        while index_x < len(chopped_map) and index_y < len(chopped_map[0]):
-            if chopped_map[index_x, index_y] != 0:
+        while index_x < len(chopped_map[0]) and index_y < len(chopped_map[1]):
+            if chopped_map[i, index_x, index_y] != 0:
                 # 追加历史动作
                 history_action_list.append(action_list[:])
                 # 将动作加入动作标签
                 action_list_space.append(action_space_exc)
                 # 将地图加入chopped
-                chopped_map1[index_chop] = chopped_map
+                chopped_map1[index_chop] = chopped_map[i]
                 index_chop = index_chop + 1
                 # 将此坐标点化为 0
-                chopped_map[index_x, index_y] = 0
+                chopped_map[i, index_x, index_y] = 0
                 action_list.append(action_space_exc)
 
             if direct_bool:
@@ -100,7 +100,7 @@ def create_test():
                     # 将动作加入动作标签
                     action_list_space.append(action_space_right)
                     # 将地图加入chopped
-                    chopped_map1[index_chop] = chopped_map
+                    chopped_map1[index_chop] = chopped_map[i]
                     index_chop = index_chop + 1
 
                     action_list.append(action_space_right)
@@ -111,7 +111,7 @@ def create_test():
                     # 将动作加入动作标签
                     action_list_space.append(action_space_down)
                     # 将地图加入chopped
-                    chopped_map1[index_chop] = chopped_map
+                    chopped_map1[index_chop] = chopped_map[i]
                     index_chop = index_chop + 1
 
                     action_list.append(action_space_down)
@@ -119,23 +119,25 @@ def create_test():
                     direct_bool = bool(1 - direct_bool)
             else:
                 if index_x > 0:
+
                     # 追加历史动作
                     history_action_list.append(action_list[:])
                     # 将动作加入动作标签
                     action_list_space.append(action_space_left)
                     # 将地图加入chopped
-                    chopped_map1[index_chop] = chopped_map
+                    chopped_map1[index_chop] = chopped_map[i]
                     index_chop = index_chop + 1
 
                     action_list.append(action_space_left)
                     index_x = index_x - 1
                 else:
+
                     # 追加历史动作
                     history_action_list.append(action_list[:])
                     # 将动作加入动作标签
                     action_list_space.append(action_space_down)
                     # 将地图加入chopped
-                    chopped_map1[index_chop] = chopped_map
+                    chopped_map1[index_chop] = chopped_map[i]
                     index_chop = index_chop + 1
 
                     action_list.append(action_space_down)
@@ -145,14 +147,14 @@ def create_test():
             break
     print(len(history_action_list))
     print(chopped_map.shape)
-    print(chopped_map1.shape)
+    print(chopped_map1[4000, :, :])
     # print(history_action_list)
     for i in range(len(history_action_list)):
         history_action_list[i] = history_action_list[i][-8:]
         if len(history_action_list[i]) < 8:
             history_action_list[i] = (8 - len(history_action_list[i])) * [0] + history_action_list[i]
 
-    # print(action_list_space)
+    print(action_list_space[:5])
     print(history_action_list[:5])
     # print(chopped_map[:5])
     return chopped_map1, history_action_list, action_list_space

@@ -34,7 +34,7 @@ class CNN(nn.Module):
         #拼接步骤
 
 
-        # output = self.out1(x)
-        # output = self.out(output)
+        output = self.out1(x)
+        output = self.out(output)
         return output
 
