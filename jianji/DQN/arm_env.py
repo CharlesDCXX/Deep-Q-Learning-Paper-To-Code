@@ -50,9 +50,9 @@ class ArmEnv(object):
         self.base_angle += self.action_space[action][1]
         self.update_observation(self.base_angle, self.arm_angle)
 
-        reward = ((self.arm_angle - self.goal_arm_angle) ** 2 + (self.base_angle - self.goal_base_angle) ** 2) ** 0.5
+        reward = -((self.arm_angle - self.goal_arm_angle) ** 2 + (self.base_angle - self.goal_base_angle) ** 2) ** 0.5
         if abs(self.obstacle_base_angle - self.base_angle) < 2 and abs(self.obstacle_arm_angle - self.arm_angle) < 2:
-            reward = -10
+            reward = -20
         done = True if abs(self.goal_base_angle - self.base_angle) < 1 and abs(
             self.arm_angle - self.arm_angle) < 1 else False
         info = ""
@@ -74,7 +74,7 @@ class ArmEnv(object):
         self.arm_angle = 80
         # 履带吊底盘旋转角度
         self.base_angle = 0
-        return self.get_observation()
+        return self.space_now
 
     def update_observation(self, base_angle, arm_angle):
         coordinate = self.get_coordinate(base_angle, arm_angle)

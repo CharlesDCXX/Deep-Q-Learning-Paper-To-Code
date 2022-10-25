@@ -1,5 +1,5 @@
 import argparse, os
-import gym
+
 import numpy as np
 import agents as Agents
 from utils import plot_learning_curve, make_env
