@@ -70,7 +70,7 @@ def create_test():
     history_action_list = []
     chopped_map = tile_grid.copy()
     # 建立一个numpy shape(n,32,32)
-    chopped_map1 = np.ones((10000, 32, 32), dtype=int)
+    chopped_map1 = np.ones((100000, 32, 32), dtype=int)
     # TEM测试集
     index_chop = 0
     length_x = len(chopped_map[0])
@@ -143,7 +143,7 @@ def create_test():
                     action_list.append(action_space_down)
                     index_y = index_y + 1
                     direct_bool = bool(1 - direct_bool)
-        if i == 2:
+        if i == 10:
             break
     print(len(history_action_list))
     print(chopped_map.shape)
@@ -157,7 +157,7 @@ def create_test():
     print(action_list_space[:5])
     print(history_action_list[:5])
     # print(chopped_map[:5])
-    return chopped_map1, history_action_list, action_list_space
+    return chopped_map1, history_action_list, action_list_space, len(history_action_list)
 
 
 class CNN(nn.Module):
@@ -197,10 +197,10 @@ class CNN(nn.Module):
         output = self.out(output)
         output = self.test(output)
 
-        return x
+        return output
 
 
-def train_test(chopped_map1, history_action_list, action_list_space):
+def train_test(chopped_map1, history_action_list, action_list_space, sample_size):
     EPOCH = 1000
     LR = 0.001  # 学习率
 
@@ -209,44 +209,53 @@ def train_test(chopped_map1, history_action_list, action_list_space):
     optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)  # optimize all cnn parameters
     loss_func = nn.CrossEntropyLoss()  # the target label is not one-hotted
 
-    s_ = np.expand_dims(chopped_map1[:3000], axis=1)
+    s_ = np.expand_dims(chopped_map1[:sample_size], axis=1)
     torch_data = torch.Tensor(s_)
-
-    # print(cnn(torch_data))
+    print(torch_data.shape)
 
     b_y = torch.LongTensor(history_action_list)
 
     test_y = torch.LongTensor(action_list_space)
-    print(test_y.shape)
+
     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
 
-    bacht_size = 10
+    bacht_size = 40
     for epoch in range(EPOCH):
-        for step in range(0, 2040, bacht_size):  # 分配 batch data, normalize x when iterate train_loader
+        for step in range(0, sample_size - 1000, bacht_size):  # 分配 batch data, normalize x when iterate train_loader
             output = cnn(torch_data[step:step + bacht_size], b_y[step:step + bacht_size])  # cnn output
             loss = loss_func(output, test_y[step:step + bacht_size])  # cross entropy loss
             optimizer.zero_grad()  # clear gradients for this training step
             loss.backward()  # backpropagation, compute gradients
             optimizer.step()  # apply gradients
+    torch.save(cnn, 'net.pkl')
     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
 
-    from symbol import term
 
-    index_re = 20
-    test_output = cnn(torch_data[:index_re], b_y[:index_re])
-    print(test_output)
-    # 输出一维最大值 纵坐标
-    pred_y = torch.max(test_output, 1)[1].data.numpy().squeeze()
-    print(pred_y, 'prediction number')
-    print(test_y[:index_re].numpy())
+def test_label(torch_data, b_y, test_y):
+    cnn = torch.load('net.pkl')
+    # index_re = 20
+    # test_output = cnn(torch_data[:index_re], b_y[:index_re])
+    # print(test_output)
+    # # 输出一维最大值 纵坐标
+    # pred_y = torch.max(test_output, 1)[1].data.numpy().squeeze()
+    # print(pred_y, 'prediction number')
+    # print(test_y[:index_re].numpy())
 
-    index_re = 60
-    index_start = 2040
+    index_re = 200
+    index_start = sample_size - 1000
+    print(torch_data[index_start:(index_start + 1)])
+    print(b_y[index_start:(index_start + 1)])
     test_output = cnn(torch_data[index_start:(index_start + index_re)], b_y[index_start:(index_start + index_re)])
     # 输出一维最大值 纵坐标
     pred_y = torch.max(test_output, 1)[1].data.numpy().squeeze()
     print(pred_y, 'prediction number')
     print(test_y[index_start:(index_start + index_re)].numpy())
+    test_label_y = test_y[index_start:(index_start + index_re)].numpy()
+    sum_num = 0
+    for i in range(0, len(test_label_y)):
+        if test_label_y[i] == pred_y[i]:
+            sum_num = sum_num + 1
+    print(sum_num / len(test_label_y))
 
 
 if __name__ == "__main__":
@@ -258,5 +267,10 @@ if __name__ == "__main__":
     min_depth = -5
     # 最高深度
     max_depth = 10
-    chopped_map1, history_action_list, action_list_space = create_test()
-    train_test(chopped_map1, history_action_list, action_list_space)
+    chopped_map1, history_action_list, action_list_space, sample_size = create_test()
+    # train_test(chopped_map1, history_action_list, action_list_space, sample_size)
+    s_ = np.expand_dims(chopped_map1[:sample_size], axis=1)
+    torch_data = torch.Tensor(s_)
+    b_y = torch.LongTensor(history_action_list)
+    test_y = torch.LongTensor(action_list_space)
+    test_label(torch_data, b_y, test_y)
