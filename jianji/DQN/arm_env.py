@@ -22,37 +22,50 @@ class ArmEnv(object):
         # 第一个坐标右手边x，第二个坐标面朝方向y，第三个坐标高度z
         self.space_now = np.zeros([space_x, space_y, space_z], dtype=int)
         # 履带吊底座坐标
-        self.base = [5, 0, 0]
+        self.base = [0, -70, 95]
         # 履带吊长度
-        self.arm_length = 10
+        self.arm_length = 252.6
         # 履带吊吊绳长度
         self.line_length = 0
         # 履带吊上扬初始角度
-        self.arm_angle = 80
+        self.arm_angle = 90
         # 履带吊底盘旋转角度
         self.base_angle = 0
         # 是否显示
         self.is_render = False
         # 目标点
-        self.goal = [3, 4, 0]
+        self.goal = [100, -70, 150]
         self.goal_arm_angle = self.get_target_up_angel()
         self.goal_base_angle = self.get_target_base_angel()
         # 障碍物
-        self.obstacle = [3, 4, 5]
+        self.obstacle = [100, -80, 150]
         self.obstacle_arm_angle = self.get_obstacle_angel()
         self.obstacle_base_angle = self.get_obstacle_base_angel()
         # 履带吊顶端坐标
         self.arm_head = self.get_coordinate(self.base_angle, self.arm_angle)
-        self.action_space = [[0, -0.5], [0, 0.5], [0.5, 0], [0.5, 0]]
-
+        self.action_space = [[0, -0.5], [0, 0.5], [0.5, 0], [-0.5, 0]]
+        self.pre_distance = 0
     def step(self, action):
+        # print("action%d"% action)
         self.arm_angle += self.action_space[action][0]
         self.base_angle += self.action_space[action][1]
+        if self.arm_angle > 90:
+            self.arm_angle = 90
+        if self.arm_angle < 60:
+            self.arm_angle = 60
+        if self.base_angle > 60:
+            self.base_angle = 60
+        if self.base_angle < 0:
+            self.base_angle = 0
         self.update_observation(self.base_angle, self.arm_angle)
+        # print("self.arm_angle:%.2f,self.base_angle:%.2f" % (self.arm_angle, self.base_angle))
 
-        reward = -((self.arm_angle - self.goal_arm_angle) ** 2 + (self.base_angle - self.goal_base_angle) ** 2) ** 0.5
+        distance = ((self.arm_angle - self.goal_arm_angle) ** 2 + (self.base_angle - self.goal_base_angle) ** 2)
+        reward = self.pre_distance - distance
+        self.pre_distance = distance
+        # print("reward%s" % reward)
         if abs(self.obstacle_base_angle - self.base_angle) < 2 and abs(self.obstacle_arm_angle - self.arm_angle) < 2:
-            reward = -20
+            reward = -2000
         done = True if abs(self.goal_base_angle - self.base_angle) < 1 and abs(
             self.arm_angle - self.arm_angle) < 1 else False
         info = ""
@@ -77,7 +90,7 @@ class ArmEnv(object):
         return self.space_now
 
     def update_observation(self, base_angle, arm_angle):
-        coordinate = self.get_coordinate(base_angle, arm_angle)
+
         index_z = np.sin(math_a(arm_angle))
         xy = self.arm_length * np.cos(math_a(arm_angle))
         index_x = np.sin(math_a(base_angle)) * xy
@@ -117,15 +130,16 @@ class ArmEnv(object):
         obstacle_length = (obstacle_x * obstacle_x + obstacle_y * obstacle_y + obstacle_z * obstacle_z) ** 0.5
         return np.arccos(obstacle_xy / obstacle_length) * 180 / np.pi
 
-    def get_obstacle_base_angel(env):
-        obstacle_x = env.obstacle[0]
-        obstacle_y = env.obstacle[1]
+    def get_obstacle_base_angel(self):
+        obstacle_x = self.obstacle[0]
+        obstacle_y = self.obstacle[1]
         obstacle_xy = (obstacle_x * obstacle_x + obstacle_y * obstacle_y) ** 0.5
         return np.arccos(obstacle_y / obstacle_xy) * 180 / np.pi
 
 
 if __name__ == '__main__':
-    env = ArmEnv(space_x=1, space_y=1)
+    Note = open('x.txt', mode='w')
+    env = ArmEnv(space_x=1, space_y=1,space_z=1)
     # 获得目标角度
     target_arm_angle = env.get_target_up_angel()
     target_base_angle = env.get_target_base_angel()
@@ -136,7 +150,7 @@ if __name__ == '__main__':
     print("obstacle_base_angle:%f,obstacle_arm_angle:%f" % (obstacle_base_angle, obstacle_arm_angle))
     base = True
     # 当相差角度过大的时候
-    while abs(target_base_angle - env.base_angle) > 1 and abs(target_arm_angle - env.arm_angle) > 1:
+    while abs(target_base_angle - env.base_angle) > 1 or abs(target_arm_angle - env.arm_angle) > 1:
         # 判断是否转动底盘
         if base:
             # 判断目标角度与底盘角度之差
@@ -161,6 +175,8 @@ if __name__ == '__main__':
                         env.arm_angle = env.arm_angle - 0.5
             else:
                 base = bool(1 - base)
+        a = (str(env.base_angle) + ' ' + str(env.arm_angle))
+        Note.write(a + '\n')  # \n 换行符
         print("env.base_angele:%f,env.arm_angle:%f" % (env.base_angle, env.arm_angle))
     # print(abs(target_base_angle - env.base_angle)>1.0)
     # print(abs(obstacle_base_angle - env.base_angle))

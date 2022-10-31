@@ -1,12 +1,13 @@
 import numpy as np
 from dqn_agent import DQNAgent
 from arm_env import ArmEnv
+from utils import plot_learning_curve
 
 if __name__ == '__main__':
     env = ArmEnv(space_x=100, space_y=100,space_z=100)
     best_score = -np.inf
     load_checkpoint = False
-    n_games = 250
+    n_games = 10
 
     agent = DQNAgent(gamma=0.99, epsilon=1, lr=0.0001,
                      input_dims=env.space_now.shape,
@@ -57,3 +58,4 @@ if __name__ == '__main__':
         eps_history.append(agent.epsilon)
 
     x = [i + 1 for i in range(len(scores))]
+    plot_learning_curve(steps_array, scores, eps_history, figure_file)
