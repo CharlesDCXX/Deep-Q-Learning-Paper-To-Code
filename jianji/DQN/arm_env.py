@@ -22,9 +22,9 @@ class ArmEnv(object):
         # 第一个坐标右手边x，第二个坐标面朝方向y，第三个坐标高度z
         self.space_now = np.zeros([space_x, space_y, space_z], dtype=int)
         # 履带吊底座坐标
-        self.base = [0, -70, 95]
+        self.base = [0, -7, 9.5]
         # 履带吊长度
-        self.arm_length = 252.6
+        self.arm_length = 25.51
         # 履带吊吊绳长度
         self.line_length = 0
         # 履带吊上扬初始角度
@@ -33,18 +33,27 @@ class ArmEnv(object):
         self.base_angle = 0
         # 是否显示
         self.is_render = False
+        self.on_goal = 0
         # 目标点
-        self.goal = [100, -70, 150]
+        self.goal = [10, -7, 0]
         self.goal_arm_angle = self.get_target_up_angel()
         self.goal_base_angle = self.get_target_base_angel()
+        print("目标动臂角度：", self.goal_arm_angle, "目标底盘角度：", self.goal_base_angle)
+
         # 障碍物
-        self.obstacle = [100, -80, 150]
+        self.obstacle = [14, -7, 0]
         self.obstacle_arm_angle = self.get_obstacle_angel()
         self.obstacle_base_angle = self.get_obstacle_base_angel()
+
         # 履带吊顶端坐标
         self.arm_head = self.get_coordinate(self.base_angle, self.arm_angle)
-        self.action_space = [[0, -0.5], [0, 0.5], [0.5, 0], [-0.5, 0]]
-        self.pre_distance = 0
+        self.action_space = [[0, -1], [0, 1], [1, 0], [-1, 0]]
+        self.pre_distance = (((self.arm_angle - self.goal_arm_angle) ** 2 + (
+                    self.base_angle - self.goal_base_angle) ** 2) ** 0.5)
+
+        self.space_now[self.obstacle[0], self.obstacle[1], self.obstacle[2]] = 1
+        self.space_now[self.goal[0], self.goal[1], self.goal[2]] = 1
+
     def step(self, action):
         # print("action%d"% action)
         self.arm_angle += self.action_space[action][0]
@@ -53,22 +62,32 @@ class ArmEnv(object):
             self.arm_angle = 90
         if self.arm_angle < 60:
             self.arm_angle = 60
-        if self.base_angle > 60:
-            self.base_angle = 60
+        if self.base_angle > 180:
+            self.base_angle = 180
         if self.base_angle < 0:
             self.base_angle = 0
         self.update_observation(self.base_angle, self.arm_angle)
         # print("self.arm_angle:%.2f,self.base_angle:%.2f" % (self.arm_angle, self.base_angle))
-
-        distance = ((self.arm_angle - self.goal_arm_angle) ** 2 + (self.base_angle - self.goal_base_angle) ** 2)
-        reward = self.pre_distance - distance
+        reward = 0
+        distance = (((self.arm_angle - self.goal_arm_angle) ** 2 + (
+                    self.base_angle - self.goal_base_angle) ** 2) ** 0.5)
+        # reward = self.pre_distance - distance
+        if self.pre_distance - distance > 0:
+            reward = 1
+        else:
+            reward = - 1
         self.pre_distance = distance
         # print("reward%s" % reward)
-        if abs(self.obstacle_base_angle - self.base_angle) < 2 and abs(self.obstacle_arm_angle - self.arm_angle) < 2:
-            reward = -2000
-        done = True if abs(self.goal_base_angle - self.base_angle) < 1 and abs(
-            self.arm_angle - self.arm_angle) < 1 else False
+        done = False
+        if abs(self.obstacle_base_angle - self.base_angle) <= 2 and abs(self.obstacle_arm_angle - self.arm_angle) <= 2:
+            reward = reward - 20
+        if abs(self.goal_base_angle - self.base_angle) <= 1 and abs(self.goal_arm_angle - self.arm_angle) <= 1:
+            self.on_goal += 1
+            reward = reward + 20
+            if self.on_goal > 5:
+                done = True
         info = ""
+        # print(reward)
         return self.space_now, reward, done, info
 
     # 根据角度得到顶端坐标
@@ -84,21 +103,24 @@ class ArmEnv(object):
 
     # 重置履带吊两角度
     def reset(self):
-        self.arm_angle = 80
+        self.arm_angle = 90
         # 履带吊底盘旋转角度
         self.base_angle = 0
+        self.on_goal = 0
         return self.space_now
 
     def update_observation(self, base_angle, arm_angle):
-
         index_z = np.sin(math_a(arm_angle))
-        xy = self.arm_length * np.cos(math_a(arm_angle))
+        xy = np.cos(math_a(arm_angle))
         index_x = np.sin(math_a(base_angle)) * xy
         index_y = np.cos(math_a(base_angle)) * xy
-        for i in range(self.arm_length):
+        # self.space_now[int(self.base[0] + round(index_x * self.arm_length, 0)), int(self.base[1] + round(index_y * self.arm_length, 0)), int(self.base[0] + round(
+        #             index_z * self.arm_length, 0))] = 1
+        for i in range(int(self.arm_length)):
             self.space_now[
-                int(self.base[0] + round(index_x * i, 0)), int(self.base[1] + round(index_y * i, 0)), int(self.base[0] + round(
-                    index_z * i, 0))] = 1
+                int(self.base[0] + round(index_x * i, 0)), int(self.base[1] + round(index_y * i, 0)), int(
+                    self.base[0] + round(
+                        index_z * i, 0))] = 1
 
     def get_observation(self):
         s_ = np.expand_dims(self.space_now, axis=0)
@@ -106,8 +128,8 @@ class ArmEnv(object):
 
     # 得到目标旋转角度
     def get_target_up_angel(env):
-        goal_x = env.goal[0]
-        goal_y = env.goal[1]
+        goal_x = env.goal[0] - env.base[0]
+        goal_y = env.goal[1] - env.base[1]
         # 求出地面斜边
         # 斜边长度
         goal_xy = (goal_x * goal_x + goal_y * goal_y) ** 0.5
@@ -115,31 +137,30 @@ class ArmEnv(object):
 
     # 得到目标底盘旋转角度
     def get_target_base_angel(env):
-        goal_x = env.goal[0]
-        goal_y = env.goal[1]
+        goal_x = env.goal[0] - env.base[0]
+        goal_y = env.goal[1] - env.base[1]
         goal_xy = (goal_x * goal_x + goal_y * goal_y) ** 0.5
         return np.arccos(goal_y / goal_xy) * 180 / np.pi
 
     # 得到障碍物旋转角度
     def get_obstacle_angel(env):
-        obstacle_x = env.obstacle[0]
-        obstacle_y = env.obstacle[1]
-        obstacle_z = env.obstacle[2]
+        obstacle_x = env.obstacle[0] - env.base[0]
+        obstacle_y = env.obstacle[1] - env.base[1]
+        obstacle_z = env.obstacle[2] - env.base[2]
         # 求出地面斜边
         obstacle_xy = (obstacle_x * obstacle_x + obstacle_y * obstacle_y) ** 0.5
         obstacle_length = (obstacle_x * obstacle_x + obstacle_y * obstacle_y + obstacle_z * obstacle_z) ** 0.5
         return np.arccos(obstacle_xy / obstacle_length) * 180 / np.pi
 
-    def get_obstacle_base_angel(self):
-        obstacle_x = self.obstacle[0]
-        obstacle_y = self.obstacle[1]
+    def get_obstacle_base_angel(env):
+        obstacle_x = env.obstacle[0] - env.base[0]
+        obstacle_y = env.obstacle[1] - env.base[1]
         obstacle_xy = (obstacle_x * obstacle_x + obstacle_y * obstacle_y) ** 0.5
         return np.arccos(obstacle_y / obstacle_xy) * 180 / np.pi
 
 
 if __name__ == '__main__':
-    Note = open('x.txt', mode='w')
-    env = ArmEnv(space_x=1, space_y=1,space_z=1)
+    env = ArmEnv(space_x=1, space_y=1)
     # 获得目标角度
     target_arm_angle = env.get_target_up_angel()
     target_base_angle = env.get_target_base_angel()
@@ -150,7 +171,7 @@ if __name__ == '__main__':
     print("obstacle_base_angle:%f,obstacle_arm_angle:%f" % (obstacle_base_angle, obstacle_arm_angle))
     base = True
     # 当相差角度过大的时候
-    while abs(target_base_angle - env.base_angle) > 1 or abs(target_arm_angle - env.arm_angle) > 1:
+    while abs(target_base_angle - env.base_angle) > 1 and abs(target_arm_angle - env.arm_angle) > 1:
         # 判断是否转动底盘
         if base:
             # 判断目标角度与底盘角度之差
@@ -175,8 +196,6 @@ if __name__ == '__main__':
                         env.arm_angle = env.arm_angle - 0.5
             else:
                 base = bool(1 - base)
-        a = (str(env.base_angle) + ' ' + str(env.arm_angle))
-        Note.write(a + '\n')  # \n 换行符
         print("env.base_angele:%f,env.arm_angle:%f" % (env.base_angle, env.arm_angle))
     # print(abs(target_base_angle - env.base_angle)>1.0)
     # print(abs(obstacle_base_angle - env.base_angle))

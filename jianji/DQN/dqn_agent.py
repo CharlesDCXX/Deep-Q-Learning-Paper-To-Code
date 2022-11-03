@@ -5,7 +5,7 @@ from replay_memory import ReplayBuffer
 
 class DQNAgent(object):
     def __init__(self, gamma, epsilon, lr, n_actions, input_dims,
-                 mem_size, batch_size, eps_min=0.01, eps_dec=5e-7,
+                 mem_size, batch_size, eps_min=0.01, eps_dec=5e-6,
                  replace=1000, algo=None, env_name=None, chkpt_dir='tmp/dqn'):
         self.gamma = gamma
         self.epsilon = epsilon
