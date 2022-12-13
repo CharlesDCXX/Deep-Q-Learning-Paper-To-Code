@@ -8,7 +8,7 @@ Class RepeatActionAndMaxFrame
   	set total reward to 0
     set done to false
   	for i in range repeat
-  		call the env.step function
+  		call the self.step function
         receive obs, reward, done, info
   		increment total reward
   		insert obs in frame buffer
@@ -21,7 +21,7 @@ Class RepeatActionAndMaxFrame
   function reset:
     input: none
 
-  	call env.reset
+  	call self.reset
   	reset the frame buffer
     store initial observation in buffer
 
@@ -30,9 +30,9 @@ Class RepeatActionAndMaxFrame
 
 function make_env:
   input: environment name, new shape, stack size
-  init env with the base gym.make function
-  env := RepeatActionAndMaxFrame
-  env := PreprocessFrame
-  env := StackFrames
+  init self with the base gym.make function
+  self := RepeatActionAndMaxFrame
+  self := PreprocessFrame
+  self := StackFrames
 
-  return: env
+  return: self

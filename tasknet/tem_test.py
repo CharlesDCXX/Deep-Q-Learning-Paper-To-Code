@@ -63,7 +63,7 @@ def create_test():
     action_space_right = 4
 
     # 读取tile_grid
-    tile_grid = np.load('test_x.npy')
+    tile_grid = np.load('/Users/duanchenxi/project/GitHub/hello-world/tasknet/test_x.npy')
     # 下一个动作标签
     action_list_space = []
     # 历史动作
@@ -185,14 +185,15 @@ class CNN(nn.Module):
 
     def forward(self, x, y):
         x = self.conv1(x)
+        print(x.shape)
         x = self.conv2(x)
         x = x.view(x.size(0), -1)  # 展平多维的卷积图成 (batch_size, 32 * 7 * 7)
         # 拼接步骤
 
-        # print(x.shape)
-        # print(y.shape)
+        print(x.shape)
+        print(y.shape)
         x = torch.cat([x, y], 1)
-        # print(x.shape)
+        print(x.shape)
         output = self.out1(x)
         output = self.out(output)
         output = self.test(output)
@@ -268,7 +269,7 @@ if __name__ == "__main__":
     # 最高深度
     max_depth = 10
     chopped_map1, history_action_list, action_list_space, sample_size = create_test()
-    # train_test(chopped_map1, history_action_list, action_list_space, sample_size)
+    train_test(chopped_map1, history_action_list, action_list_space, sample_size)
     s_ = np.expand_dims(chopped_map1[:sample_size], axis=1)
     torch_data = torch.Tensor(s_)
     b_y = torch.LongTensor(history_action_list)

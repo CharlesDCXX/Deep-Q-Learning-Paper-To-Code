@@ -17,6 +17,10 @@ def math_a(angle):
     return angle * np.pi / 180
 
 
+def get_observation(s):
+    s_ = np.expand_dims(s, axis=0)
+    return s_
+
 class ArmEnv(object):
     def __init__(self, space_x, space_y, space_z):
         # 第一个坐标右手边x，第二个坐标面朝方向y，第三个坐标高度z
@@ -43,16 +47,20 @@ class ArmEnv(object):
         # 障碍物
         self.obstacle = [14, -7, 0]
         self.obstacle_arm_angle = self.get_obstacle_angel()
+        self.obstacle_arm_angle = 84
         self.obstacle_base_angle = self.get_obstacle_base_angel()
+        self.obstacle_base_angle = 20
+        print("障碍物动臂角度：", self.obstacle_arm_angle, "障碍物底盘角度：", self.obstacle_base_angle)
 
         # 履带吊顶端坐标
         self.arm_head = self.get_coordinate(self.base_angle, self.arm_angle)
         self.action_space = [[0, -1], [0, 1], [1, 0], [-1, 0]]
         self.pre_distance = (((self.arm_angle - self.goal_arm_angle) ** 2 + (
-                    self.base_angle - self.goal_base_angle) ** 2) ** 0.5)
+                self.base_angle - self.goal_base_angle) ** 2) ** 0.5)
 
         self.space_now[self.obstacle[0], self.obstacle[1], self.obstacle[2]] = 1
         self.space_now[self.goal[0], self.goal[1], self.goal[2]] = 1
+        self.s = self.reset()
 
     def step(self, action):
         # print("action%d"% action)
@@ -66,11 +74,11 @@ class ArmEnv(object):
             self.base_angle = 180
         if self.base_angle < 0:
             self.base_angle = 0
-        self.update_observation(self.base_angle, self.arm_angle)
+        # self.update_observation(self.base_angle, self.arm_angle)
         # print("self.arm_angle:%.2f,self.base_angle:%.2f" % (self.arm_angle, self.base_angle))
         reward = 0
         distance = (((self.arm_angle - self.goal_arm_angle) ** 2 + (
-                    self.base_angle - self.goal_base_angle) ** 2) ** 0.5)
+                self.base_angle - self.goal_base_angle) ** 2) ** 0.5)
         # reward = self.pre_distance - distance
         if self.pre_distance - distance > 0:
             reward = 1
@@ -87,8 +95,13 @@ class ArmEnv(object):
             if self.on_goal > 5:
                 done = True
         info = ""
-        # print(reward)
-        return self.space_now, reward, done, info
+
+        s = np.concatenate(
+            (np.array([self.base_angle, self.arm_angle]), np.array([self.goal_base_angle, self.goal_arm_angle]),
+             np.array([self.obstacle_base_angle, self.obstacle_arm_angle]), [0])
+        )
+        s = get_observation(s)
+        return s, reward, done, info
 
     # 根据角度得到顶端坐标
     def get_coordinate(self, base_angle, arm_angle):
@@ -107,7 +120,13 @@ class ArmEnv(object):
         # 履带吊底盘旋转角度
         self.base_angle = 0
         self.on_goal = 0
-        return self.space_now
+        # return self.space_now
+        s = np.concatenate((np.array([self.base_angle, self.arm_angle]),
+                            np.array([self.goal_base_angle, self.goal_arm_angle]),
+                            np.array([self.obstacle_base_angle, self.obstacle_arm_angle]),
+                            [0]))
+        s = get_observation(s)
+        return s
 
     def update_observation(self, base_angle, arm_angle):
         index_z = np.sin(math_a(arm_angle))
@@ -121,10 +140,6 @@ class ArmEnv(object):
                 int(self.base[0] + round(index_x * i, 0)), int(self.base[1] + round(index_y * i, 0)), int(
                     self.base[0] + round(
                         index_z * i, 0))] = 1
-
-    def get_observation(self):
-        s_ = np.expand_dims(self.space_now, axis=0)
-        return s_
 
     # 得到目标旋转角度
     def get_target_up_angel(env):
