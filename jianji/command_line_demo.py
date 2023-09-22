@@ -33,8 +33,8 @@ class ArmEnv(object):
         self.goal_base_angle = self.get_target_base_angel()
         print("目标动臂角度：", self.goal_arm_angle, "目标底盘角度：", self.goal_base_angle)
 
-        # 障碍物
-        self.obstacle = [14, -7, 0]
+        # 障碍物的数量 ？
+        self.obstacle = [14, -7, 0]#【x,y,z,宽度，高度】
         self.obstacle_arm_angle = self.get_obstacle_angel()
         self.obstacle_arm_angle = 84
         self.obstacle_base_angle = self.get_obstacle_base_angel()
@@ -210,8 +210,8 @@ class qlearn(object):
             while not is_terminated:
                 if episode == self.MAX_EPISODES - 1:
                     self.EPSILON = 1
-                    print("self.arm_angle:%d,self.base_angle:%d" % (env.arm_angle, env.base_angle))
-                    a = (str(env.base_angle) + ' ' + str(env.arm_angle))
+                    print("self.arm_angle:%d,self.base_angle:%d, 0" % (env.arm_angle, env.base_angle))
+                    a = (str(env.base_angle) + ' ' + str(env.arm_angle) + ' 0')
                     Note.write(a + '\n')  # \n 换行符
                 A = self.choose_action(S, q_table)
                 S_, R, done = self.get_env_feedback(A)  # take action & get next state and reward
@@ -228,15 +228,18 @@ class qlearn(object):
         # 或：多个sheet页面
         # 生成一个excelWriter
         Note.close()
-        writer = pd.ExcelWriter('./conclusion.xlsx')
-        q_table.to_excel(writer, sheet_name='sheet_1', index=False)
-        writer.save()
+        # writer = pd.ExcelWriter('./conclusion.xlsx')
+        # q_table.to_excel(writer, sheet_name='sheet_1', index=False)
+        # writer.save()
 
         return q_table
 
 
 if __name__ == "__main__":
     q = qlearn()
+    # 获得胡炳帅数据
+
+    # 传入参数
     q_table = q.rl()
     # print('\r\nQ-table:\n')
     # print(q_table)
